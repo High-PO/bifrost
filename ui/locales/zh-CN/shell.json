@@ -459,7 +459,15 @@
 			"label": "问题",
 			"skip": "跳过",
 			"orType": "或在下方输入你自己的回答。",
-			"skipAnswer": "请自行判断，并说明你的假设。"
+			"skipAnswer": "请自行判断，并说明你的假设。",
+			"confirm": {
+				"label": "确认更改",
+				"destructiveLabel": "不可撤销的更改",
+				"cannotUndo": "此操作无法撤销。",
+				"noArguments": "无参数。",
+				"cancel": "取消",
+				"confirm": "确认"
+			}
 		},
 		"message": {
 			"whatThisCovers": "涵盖内容",

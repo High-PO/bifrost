@@ -48,6 +48,7 @@ const cardStream = sse([
         { label: 'Cancel', hint: 'cancel' },
       ],
       allow_other: false,
+      action: { tool: 'createVirtualKey', arguments: '{"name":"team-a"}' },
     },
   },
   { type: 'done', finish_reason: 'question', conversation_id: conversationId },
@@ -104,7 +105,8 @@ async function askForWrite(page: Page) {
   await expect(composer).toBeVisible()
   await composer.fill('Create a virtual key named team-a.')
   await composer.press('Enter')
-  await expect(page.getByTestId('warp-question')).toContainText(cardQuestion)
+  await expect(page.getByTestId('warp-question')).toContainText('Create virtual key')
+  await expect(page.getByTestId('warp-confirm-arguments')).toContainText('team-a')
 }
 
 test.describe('Warp confirmation card', () => {
@@ -120,20 +122,20 @@ test.describe('Warp confirmation card', () => {
 
   test('Confirm sends the token on the card thread, once', async ({ dashboardPage }) => {
     const page = dashboardPage.page
-    await page.getByTestId('warp-question-option-0').click()
+    await page.getByTestId('warp-question-option-confirm').click()
 
     await expect.poll(() => sent.length).toBe(2)
     expect(sent[1]).toEqual({ content: token, conversationId })
     await expect(page.getByText('Done.')).toBeVisible()
     // The answered card is gone, so its Confirm cannot be pressed a second time.
     await expect(page.getByTestId('warp-question')).toHaveCount(0)
-    await expect(page.getByTestId('warp-question-option-0')).toHaveCount(0)
+    await expect(page.getByTestId('warp-question-option-confirm')).toHaveCount(0)
     expect(sent.filter((turn) => turn.content === token)).toHaveLength(1)
   })
 
   test('Cancel never sends the token', async ({ dashboardPage }) => {
     const page = dashboardPage.page
-    await page.getByTestId('warp-question-option-1').click()
+    await page.getByTestId('warp-question-option-cancel').click()
 
     await expect.poll(() => sent.length).toBe(2)
     expect(sent[1]).toEqual({ content: 'cancel', conversationId })
@@ -144,7 +146,7 @@ test.describe('Warp confirmation card', () => {
   test('Enter and letter keys do not answer a confirmation card', async ({ dashboardPage }) => {
     const page = dashboardPage.page
     // Focus off the composer, so the keys reach the card's document handler, which picks an option on any other card.
-    await page.getByTestId('warp-question').getByText(cardQuestion).click()
+    await page.getByTestId('warp-question').getByText('Create virtual key').click()
     await page.keyboard.press('Enter')
     await page.keyboard.press('a')
     await page.keyboard.press('ArrowDown')
@@ -152,5 +154,14 @@ test.describe('Warp confirmation card', () => {
 
     await expect(page.getByTestId('warp-question')).toBeVisible()
     expect(sent).toHaveLength(1)
+  })
+
+  test('Esc cancels a confirmation card', async ({ dashboardPage }) => {
+    const page = dashboardPage.page
+    await page.getByTestId('warp-question').getByText('Create virtual key').click()
+    await page.keyboard.press('Escape')
+
+    await expect.poll(() => sent.length).toBe(2)
+    expect(sent[1]).toEqual({ content: 'cancel', conversationId })
   })
 })

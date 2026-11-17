@@ -1,8 +1,8 @@
-import { acceptsOptionShortcuts, isInteractiveTarget } from "./warpQuestion.utils";
+import { acceptsOptionShortcuts, confirmArgumentRows, humanizeToolName, isInteractiveTarget } from "./warpQuestion.utils";
 import { Button } from "@/components/ui/button";
-import { isTypingInto, type WarpQuestion } from "@/components/warp/warpStream.utils";
+import { isTypingInto, type WarpConfirmAction, type WarpQuestion, type WarpQuestionOption } from "@/components/warp/warpStream.utils";
 import { cn } from "@/lib/utils";
-import { MessageCircleQuestion } from "lucide-react";
+import { MessageCircleQuestion, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -32,7 +32,10 @@ export default function WarpQuestionCard({ question, onAnswer, onSkip }: WarpQue
 
 			if (event.key === "Escape") {
 				event.preventDefault();
-				onSkip();
+				// On a confirmation card Esc is Cancel, so the model hears a plain no rather than "use your judgement".
+				const cancel = confirmOptions(question)?.cancel;
+				if (cancel) onAnswer(cancel.hint || cancel.label, cancel.label);
+				else onSkip();
 				return;
 			}
 			if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -70,6 +73,11 @@ export default function WarpQuestionCard({ question, onAnswer, onSkip }: WarpQue
 		document.addEventListener("keydown", onKeyDown);
 		return () => document.removeEventListener("keydown", onKeyDown);
 	}, [question, highlighted, onAnswer, onSkip]);
+
+	const confirm = confirmOptions(question);
+	if (confirm && question.action) {
+		return <WarpConfirmCard action={question.action} confirm={confirm.confirm} cancel={confirm.cancel} onAnswer={onAnswer} />;
+	}
 
 	return (
 		// Opaque base under the 3% tint, or the transcript shows through the floating card.
@@ -123,6 +131,104 @@ export default function WarpQuestionCard({ question, onAnswer, onSkip }: WarpQue
 				</div>
 
 				{question.allow_other && <p className="text-muted-foreground text-[11px]">{t("warp.question.orType")}</p>}
+			</div>
+		</div>
+	);
+}
+/** The Confirm and Cancel options of a confirmation card, or null for any other question. */
+function confirmOptions(question: WarpQuestion): { confirm: WarpQuestionOption; cancel: WarpQuestionOption } | null {
+	if (question.kind !== "confirm") return null;
+	const confirm = question.options.find((option) => option.hint?.startsWith("confirm:"));
+	const cancel = question.options.find((option) => option.hint === "cancel");
+	return confirm && cancel ? { confirm, cancel } : null;
+}
+
+interface WarpConfirmCardProps {
+	action: WarpConfirmAction;
+	confirm: WarpQuestionOption;
+	cancel: WarpQuestionOption;
+	onAnswer: (answer: string, label?: string) => void;
+}
+
+function WarpConfirmCard({ action, confirm, cancel, onAnswer }: WarpConfirmCardProps) {
+	const { t } = useTranslation("shell");
+	const rows = confirmArgumentRows(action.arguments);
+	const destructive = !!action.destructive;
+	const Icon = destructive ? TriangleAlert : ShieldCheck;
+
+	return (
+		<div className="bg-background dark:bg-card rounded-sm" data-testid="warp-question" data-kind="confirm">
+			<div
+				className={cn(
+					"flex flex-col gap-3 rounded-sm border p-3",
+					destructive ? "border-destructive/30 bg-destructive/3" : "border-primary/25 bg-primary/3",
+				)}
+			>
+				<div className={cn("flex items-center gap-2 text-xs", destructive ? "text-destructive" : "text-muted-foreground")}>
+					<Icon className="size-3.5 shrink-0" />
+					<span>{destructive ? t("warp.question.confirm.destructiveLabel") : t("warp.question.confirm.label")}</span>
+				</div>
+
+				<div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+					<p className="text-sm font-medium">{humanizeToolName(action.tool)}</p>
+					<code className="text-muted-foreground truncate font-mono text-[11px]">{action.tool}</code>
+				</div>
+
+				{rows === null ? (
+					<pre
+						className="bg-background max-h-48 overflow-auto rounded-sm border px-2.5 py-2 font-mono text-xs break-all whitespace-pre-wrap"
+						data-testid="warp-confirm-arguments"
+					>
+						{action.arguments}
+					</pre>
+				) : rows.length === 0 ? (
+					<p className="text-muted-foreground text-xs">{t("warp.question.confirm.noArguments")}</p>
+				) : (
+					<dl
+						className="bg-background grid max-h-48 grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-4 gap-y-1.5 overflow-auto rounded-sm border px-2.5 py-2 text-xs"
+						data-testid="warp-confirm-arguments"
+					>
+						{rows.map((row) => (
+							<div key={row.key} className="contents">
+								<dt className="text-muted-foreground truncate font-mono">{row.key}</dt>
+								<dd
+									className={cn(
+										"min-w-0 break-words",
+										(row.structured || row.empty) && "font-mono",
+										row.empty && "text-muted-foreground",
+									)}
+								>
+									{row.value}
+								</dd>
+							</div>
+						))}
+					</dl>
+				)}
+
+				{destructive && <p className="text-destructive text-xs">{t("warp.question.confirm.cannotUndo")}</p>}
+
+				<div className="flex items-center justify-end gap-2">
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						onClick={() => onAnswer(cancel.hint || cancel.label, cancel.label)}
+						data-testid="warp-question-option-cancel"
+						className="font-normal"
+					>
+						<span>{t("warp.question.confirm.cancel")}</span>
+						<kbd className="text-muted-foreground font-mono text-[10px] leading-none">Esc</kbd>
+					</Button>
+					<Button
+						type="button"
+						variant={destructive ? "destructive" : "default"}
+						size="sm"
+						onClick={() => onAnswer(confirm.hint || confirm.label, confirm.label)}
+						data-testid="warp-question-option-confirm"
+					>
+						{t("warp.question.confirm.confirm")}
+					</Button>
+				</div>
 			</div>
 		</div>
 	);

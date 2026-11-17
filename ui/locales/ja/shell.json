@@ -459,7 +459,15 @@
 			"label": "質問",
 			"skip": "スキップ",
 			"orType": "または下に自分の回答を入力してください。",
-			"skipAnswer": "最善の判断で進め、どのような前提を置いたか説明してください。"
+			"skipAnswer": "最善の判断で進め、どのような前提を置いたか説明してください。",
+			"confirm": {
+				"label": "変更の確認",
+				"destructiveLabel": "元に戻せない変更",
+				"cannotUndo": "この操作は元に戻せません。",
+				"noArguments": "引数はありません。",
+				"cancel": "キャンセル",
+				"confirm": "確認"
+			}
 		},
 		"message": {
 			"whatThisCovers": "この内容の範囲",

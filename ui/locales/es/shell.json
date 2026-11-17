@@ -459,7 +459,15 @@
 			"label": "Pregunta",
 			"skip": "Omitir",
 			"orType": "O escribe tu propia respuesta abajo.",
-			"skipAnswer": "Usa tu mejor criterio e indica qué has supuesto."
+			"skipAnswer": "Usa tu mejor criterio e indica qué has supuesto.",
+			"confirm": {
+				"label": "Confirmar cambio",
+				"destructiveLabel": "Cambio irreversible",
+				"cannotUndo": "Esta acción no se puede deshacer.",
+				"noArguments": "Sin argumentos.",
+				"cancel": "Cancelar",
+				"confirm": "Confirmar"
+			}
 		},
 		"message": {
 			"whatThisCovers": "Qué cubre esto",
